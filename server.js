@@ -1,33 +1,35 @@
 const express = require("express");
 const session = require("express-session");
 const path = require("path");
-const mysql = require("mysql2");
+const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
-
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "",
-    database: "simple_login",
+const mongoUrl = process.env.MONGO_URL || "mongodb://mongo:27017/conn";
+mongoose.connect(mongoUrl, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
+    console.log("kết nối thành côngcông MongoDB");
+}).catch(err => {
+    console.error(" Lỗi kết nối MongoDB:", err);
+    process.exit(1);
 });
 
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true, unique: true },
+    password: { type: String, required: true }
+}, { collection: 'account' });
+
+const User = mongoose.model("User", UserSchema);
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-app.use(
-    session({
-        secret: "secret-key",
-        resave: false,
-        saveUninitialized: true,
-    })
-);
+app.use(session({ secret: "secret-key", resave: false, saveUninitialized: true }));
 
 function isAuthenticated(req, res, next) {
-    if (req.session.user) {
-        return res.redirect("/success");
-    }
+    if (req.session.user) return res.redirect("/success");
     next();
 }
 
@@ -35,27 +37,25 @@ app.get("/", isAuthenticated, (req, res) => {
     res.render("login", { error: null });
 });
 
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
     const { username, password } = req.body;
+    try {
+        const user = await User.findOne({ username });
 
-    const query = "SELECT * FROM users WHERE username = ? AND password = ?";
-    db.query(query, [username, password], (err, results) => {
-        if (err) {
-            return res.send("Lỗi hệ thống!");
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.render("login", { error: "Thông tin không chính xác!" });
         }
-        if (results.length > 0) {
-            req.session.user = username;
-            return res.redirect("/success");
-        }
-        res.render("login", { error: "Sai tên đăng nhập hoặc mật khẩu!" });
-    });
+
+        req.session.user = username;
+        res.redirect("/success");
+    } catch (err) {
+        console.error(" Lỗi khi tìm người dùng:", err);
+        res.send("Lỗi hệ thống!");
+    }
 });
 
-
 app.get("/success", (req, res) => {
-    if (!req.session.user) {
-        return res.redirect("/");
-    }
+    if (!req.session.user) return res.redirect("/");
     res.render("success", { username: req.session.user });
 });
 
@@ -65,9 +65,10 @@ app.get("/logout", (req, res) => {
     });
 });
 
+
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
 app.listen(3000, () => {
-    console.log(`Server đang chạy tại http://localhost:3000`);
+    console.log(` Server đang chạy tại http://localhost:3000`);
 });
