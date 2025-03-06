@@ -16,7 +16,7 @@ services:
     depends_on:
       - mongo
     environment:
-      MONGO_URLL: "mongodb://mongo:27017/conn"
+      MONGO_URL: "mongodb://mongo:27017/conn"
 
   mongo:
     container_name: mongo
