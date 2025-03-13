@@ -7,7 +7,7 @@ const bcrypt = require("bcryptjs");
 
 const app = express();
 
-const mongoUrl = process.env.MONGO_URL || "mongodb://mongo:27017/conn";
+const mongoUrl = process.env.MONGO_URL || "mongodb://admin:admin@mongo:27017/mydatabase?authSource=admin";
 mongoose.connect(mongoUrl, {
     useNewUrlParser: true,
     useUnifiedTopology: true
@@ -42,7 +42,7 @@ app.post("/login", async (req, res) => {
     const { username, password } = req.body;
     try {
         const user = await User.findOne({ username });
-
+        console.log(user)
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.render("login", { error: "Thông tin không chính xác!" });
         }
@@ -65,6 +65,13 @@ app.get("/logout", (req, res) => {
         res.redirect("/");
     });
 });
+
+app.get("/users", async (req, res) => {
+    const user = await User.find(); 
+
+    res.send(user);
+});
+
 
 
 app.set("view engine", "ejs");

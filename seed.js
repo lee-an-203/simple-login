@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const mongoUrll = process.env.MONGO_URLL || "mongodb://mongo:27017/conn";
+const mongoUrll = process.env.MONGO_URLL || "mongodb://admin:admin@mongo:27017/mydatabase?authSource=admin";
 
 mongoose.connect(mongoUrll, {
     useNewUrlParser: true,
